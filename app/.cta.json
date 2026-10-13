@@ -1,0 +1,17 @@
+{
+  "projectName": "app",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "npm",
+  "includeExamples": false,
+  "tailwind": false,
+  "projectPreset": "blank",
+  "addOnOptions": {},
+  "git": false,
+  "install": true,
+  "intent": false,
+  "routerOnly": true,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": []
+}
