@@ -1,1 +1,133 @@
-# lite-wiki
+# Lite Wiki
+
+輕量、可自架的團隊知識庫。用 Markdown 撰寫，每次修改都保留版本紀錄。
+
+> **狀態：Alpha（v0.1.0）**。核心功能已可使用，適合小團隊自架試用；尚未建議用於正式環境，請參考[已知限制](#已知限制)。
+
+![首頁](docs/images/home.png)
+
+![所有頁面](docs/images/pages.png)
+
+## 功能
+
+- **Markdown 編輯**：所見即所得編輯器（MDXEditor），也可切換原始碼模式，或與上一版比較
+- **版本紀錄**：每次儲存都是新版本，可瀏覽任一歷史版本、比較兩個版本
+- **階層頁面**：用網址表示上下層（例如 `/wiki/docs/intro`），自動產生麵包屑
+- **搜尋**：依關鍵字搜尋標題與內容
+- **最近變更**：所有頁面的修改紀錄
+- **同時編輯保護**：別人先儲存時會提示，不會直接覆蓋
+- **登入**：瀏覽公開，建立與編輯需要登入
+
+## 技術
+
+| | |
+|---|---|
+| 前端 | React 19、TanStack Router、Tailwind CSS、MDXEditor、react-markdown |
+| 後端 | Hono（Node.js）、`pg`（直接寫 SQL，不使用 ORM） |
+| 資料庫 | PostgreSQL |
+
+## 快速開始
+
+### 需要的環境
+
+- Node.js 24 以上
+- PostgreSQL（沒有的話可以用專案附的 Docker Compose 啟動）
+
+### 1. 下載並安裝套件
+
+```bash
+git clone https://github.com/open-tw/lite-wiki.git
+cd lite-wiki
+(cd server && npm install)
+(cd app && npm install)
+```
+
+### 2. 準備資料庫
+
+使用 Docker 啟動 PostgreSQL（帳號密碼與 `.env.example` 的預設值一致）：
+
+```bash
+cd server
+docker compose up -d
+```
+
+已經有自己的 PostgreSQL 的話，先建立一個資料庫（例如 `lite_wiki`），跳過這一步。
+
+### 3. 設定環境變數
+
+```bash
+cd server
+cp .env.example .env
+```
+
+| 變數 | 說明 | 預設值 |
+|---|---|---|
+| `PG_HOST` | 資料庫主機 | `localhost` |
+| `PG_PORT` | 資料庫連接埠 | `5432` |
+| `PG_USER` | 資料庫帳號 | `postgres` |
+| `PG_PASSWORD` | 資料庫密碼（本機 trust 驗證可留空） | `postgres` |
+| `PG_DATABASE` | 資料庫名稱 | `lite_wiki` |
+| `PORT` | 後端 API 的連接埠 | `3001` |
+
+### 4. 建立資料表與帳號
+
+```bash
+cd server
+npm run db:init
+npm run user:create -- admin <你的密碼>
+```
+
+目前沒有註冊頁面，帳號都用這個指令建立。
+
+### 5. 啟動
+
+開兩個終端機：
+
+```bash
+cd server && npm run dev   # 後端 http://localhost:3001
+```
+
+```bash
+cd app && npm run dev      # 前端 http://localhost:3000
+```
+
+打開 <http://localhost:3000>，用剛才建立的帳號登入，就可以開始建立頁面。
+
+## 專案結構
+
+```
+lite-wiki/
+├── app/                 前端（Vite + React）
+│   └── src/
+│       ├── routes/      頁面路由（檔案即路由）
+│       ├── components/  共用元件
+│       └── lib/         API 呼叫、登入狀態、工具函式
+└── server/              後端（Hono）
+    ├── src/
+    │   ├── routes/      API 路由
+    │   └── scripts/     db:init、user:create
+    ├── sql/init.sql     資料表定義
+    └── docs/api.md      API 規格與前端對應
+```
+
+## 部署
+
+- 後端：`cd server && npm run build && npm start`
+- 前端：`cd app && npm run build`，將 `app/dist/` 作為靜態檔案提供
+- **前端與 `/api` 必須在同一個網域**（登入使用 cookie）。例如用 Nginx 或 Caddy 提供 `app/dist/`，並把 `/api` 轉給後端；未符合的路徑要回傳 `index.html`
+- 正式環境請設定 `NODE_ENV=production`，session cookie 才會加上 `Secure`（需要 HTTPS）
+
+## 已知限制
+
+- 沒有註冊頁面，帳號需用 `npm run user:create` 建立
+- 版本比較目前只是左右並排顯示原文，尚未標示差異
+- 登入沒有限制嘗試次數；過期的 session 不會自動清除
+- 沒有權限分級：所有登入的使用者都能編輯所有頁面
+- 尚未有自動化測試與 CI
+- 尚未支援暗色模式
+
+歡迎開 issue 或 PR。
+
+## 授權
+
+[MIT](LICENSE)

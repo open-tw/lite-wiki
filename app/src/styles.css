@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/*
+ * Tailwind 的 Preflight 會清掉瀏覽器預設樣式（標題大小、清單符號、margin 等），
+ * 這裡補回全站共用的基本樣式。個別版面直接在 JSX 用 utility class；
+ * Markdown 內文用 typography 的 prose，不受這裡影響。
+ */
+@layer base {
+  body {
+    @apply bg-white font-sans text-gray-900 antialiased;
+  }
+
+  main {
+    @apply mx-auto my-12 w-[min(48rem,calc(100%-2rem))];
+  }
+
+  h1 {
+    @apply mb-6 text-3xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply mb-3 text-lg font-semibold;
+  }
+
+  p {
+    @apply my-3;
+  }
+
+  a {
+    @apply text-blue-600 hover:underline;
+  }
+
+  main ul {
+    @apply list-disc space-y-1 pl-6;
+  }
+
+  main ol {
+    @apply list-decimal space-y-1 pl-6;
+  }
+
+  code {
+    @apply rounded bg-gray-100 px-1 py-0.5 font-mono text-sm;
+  }
+
+  [role='alert'] {
+    @apply text-sm text-red-600;
+  }
+}
+
+/* 按鈕和輸入框用 class 套用，不直接選 button/input，避免影響 MDXEditor 工具列 */
+@layer components {
+  .btn {
+    @apply inline-flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-blue-600 bg-blue-600 text-white hover:bg-blue-700;
+  }
+
+  .btn-danger {
+    @apply border-red-600 bg-red-600 text-white hover:bg-red-700;
+  }
+
+  .input {
+    @apply block w-full rounded-md border border-gray-300 px-3 py-1.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none;
+  }
+}
