@@ -27,6 +27,7 @@ import {
   toolbarPlugin,
 } from '@mdxeditor/editor'
 import '@mdxeditor/editor/style.css'
+import { translation } from '#/lib/mdxeditor-translation'
 
 type Props = {
   // 初始內容；MDXEditor 是非受控元件，之後的變動透過 onChange 回傳
@@ -47,6 +48,7 @@ export function MarkdownEditor({ markdown, original, onChange, onError, onUpload
       // 與檢視頁 MarkdownView 相同的排版，編輯時看到的就是儲存後的樣子
       contentEditableClassName="prose max-w-none min-h-80 prose-pre:bg-gray-100 prose-pre:text-gray-800"
       markdown={markdown}
+      translation={translation}
       onChange={onChange}
       onError={({ error }) => onError?.(error)}
       plugins={[

@@ -1,0 +1,129 @@
+{
+  "frontmatterEditor": {
+    "title": "編輯中繼資料",
+    "key": "鍵",
+    "value": "值",
+    "addEntry": "新增項目",
+    "dialogDescription": "新增、編輯或移除文件中繼資料的鍵值項目。"
+  },
+  "dialog": {
+    "close": "關閉對話框"
+  },
+  "dialogControls": {
+    "save": "儲存",
+    "cancel": "取消"
+  },
+  "uploadImage": {
+    "dialogTitle": "上傳圖片",
+    "dialogDescription": "從網址插入圖片，或從你的裝置上傳。",
+    "dialogDescriptionNoUpload": "從網址插入圖片。",
+    "uploadInstructions": "從你的裝置上傳圖片：",
+    "addViaUrlInstructions": "或從網址新增圖片：",
+    "addViaUrlInstructionsNoUpload": "從網址新增圖片：",
+    "autoCompletePlaceholder": "選擇或貼上圖片網址",
+    "alt": "替代文字：",
+    "title": "標題：",
+    "width": "寬度：",
+    "height": "高度："
+  },
+  "imageEditor": {
+    "deleteImage": "刪除圖片",
+    "editImage": "編輯圖片"
+  },
+  "createLink": {
+    "url": "網址",
+    "urlPlaceholder": "選擇或貼上網址",
+    "text": "連結文字",
+    "textTooltip": "用於顯示連結的文字",
+    "title": "標題",
+    "titleTooltip": "連結的 title 屬性，於滑鼠懸停時顯示",
+    "saveTooltip": "設定網址",
+    "cancelTooltip": "取消修改"
+  },
+  "linkPreview": {
+    "open": "在新視窗中開啟 {{url}}",
+    "edit": "編輯連結網址",
+    "copyToClipboard": "複製到剪貼簿",
+    "copied": "已複製！",
+    "remove": "移除連結"
+  },
+  "table": {
+    "deleteTable": "刪除表格",
+    "columnMenu": "欄選單",
+    "textAlignment": "文字對齊",
+    "alignLeft": "靠左對齊",
+    "alignCenter": "置中對齊",
+    "alignRight": "靠右對齊",
+    "insertColumnLeft": "在此左側插入一欄",
+    "insertColumnRight": "在此右側插入一欄",
+    "deleteColumn": "刪除此欄",
+    "rowMenu": "列選單",
+    "insertRowAbove": "在上方插入一列",
+    "insertRowBelow": "在下方插入一列",
+    "deleteRow": "刪除此列"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "段落",
+      "quote": "引用",
+      "heading": "標題 {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "選擇區塊類型",
+      "placeholder": "區塊類型"
+    },
+    "toggleGroup": "切換群組",
+    "removeBold": "移除粗體",
+    "bold": "粗體",
+    "removeItalic": "移除斜體",
+    "italic": "斜體",
+    "removeUnderline": "移除底線",
+    "underline": "底線",
+    "removeStrikethrough": "移除刪除線",
+    "strikethrough": "刪除線",
+    "removeSuperscript": "移除上標",
+    "superscript": "上標",
+    "removeSubscript": "移除下標",
+    "subscript": "下標",
+    "removeInlineCode": "移除行內程式碼",
+    "inlineCode": "行內程式碼",
+    "link": "建立連結",
+    "richText": "所見即所得",
+    "diffMode": "與上一版差異",
+    "source": "Markdown 原始碼",
+    "admonition": "插入提示區塊",
+    "codeBlock": "插入程式碼區塊",
+    "editFrontmatter": "編輯中繼資料",
+    "insertFrontmatter": "插入中繼資料",
+    "image": "插入圖片",
+    "table": "插入表格",
+    "thematicBreak": "插入分隔線",
+    "bulletedList": "項目清單",
+    "numberedList": "編號清單",
+    "checkList": "核取清單",
+    "undo": "復原 {{shortcut}}",
+    "redo": "重做 {{shortcut}}",
+    "highlight": "螢光標示",
+    "removeHighlight": "移除螢光標示"
+  },
+  "admonitions": {
+    "note": "注意",
+    "tip": "提示",
+    "danger": "危險",
+    "info": "資訊",
+    "caution": "警告",
+    "changeType": "選擇提示區塊類型",
+    "placeholder": "提示區塊類型"
+  },
+  "codeBlock": {
+    "language": "程式碼區塊語言",
+    "selectLanguage": "選擇程式碼區塊語言",
+    "inlineLanguage": "語言"
+  },
+  "codeblock": {
+    "delete": "刪除程式碼區塊"
+  },
+  "contentArea": {
+    "editableMarkdown": "可編輯的 Markdown"
+  }
+}
