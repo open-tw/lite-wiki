@@ -268,6 +268,8 @@ ORDER BY p.updated_at DESC
 - `/login` 加上密碼欄位與錯誤訊息
 - `/edit/$` 儲存時送 `baseRev`；`409` 提示有人先更新、`401` 提示登入過期，內容都保留在編輯器
 - `/history/$` 只拿版本列表，有 `rev` 時另外取該版本；`/diff/$` 分別取兩個版本
+- `/diff/$` 用 `@codemirror/merge`（MDXEditor 已依賴，未新增套件）比對 Markdown 原文：預設單欄（`unifiedMergeView`），可切換並排（`MergeView`），選擇存在 localStorage；未變更段落摺疊、增刪行數用 `Chunk.build` 計算；`from` 大於 `to` 時自動對調
+- `/history/$` 可選任意兩個版本比較（左欄舊版、右欄新版）
 - `/edit/$` 啟用 MDXEditor 的 `imagePlugin`，上傳走 `uploadImage`；失敗時在編輯器下方顯示錯誤。關閉圖片縮放，避免存成檢視頁不渲染的 HTML `<img>`
 - `/recent` 改用 `GET /api/recent`；時間用 `lib/format.ts` 轉成在地格式
 - 角色：`auth.ts` 的 `hasRole`、`mayEdit` 只決定按鈕顯示；`_auth/_editor.tsx`、`_auth/_admin.tsx` 兩個無路徑 layout 在 `beforeLoad` 檢查角色，不足時顯示「沒有權限」（`components/Forbidden.tsx`）。實際權限一律以 API 的 `403` 為準
