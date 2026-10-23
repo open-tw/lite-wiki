@@ -5,15 +5,16 @@
 
 - 所有 API 以 `/api` 開頭（`src/index.ts` 用 `basePath('/api')` 統一加上，定義路由時不用寫），回傳 JSON；時間一律為 ISO 8601 字串
 - slug 可包含 `/`（例如 `docs/intro`），在 Hono 用 `:slug{.+}` 取得
-- 標示 🔒 的 API 需要登入（session cookie），未登入回 `401`
+- 標示 🔒 的 API 需要登入（session cookie），未登入回 `401`；後面標註角色的（例如 🔒 editor）另外需要該角色以上，不足回 `403`
+- 角色由低到高：`viewer`（只能瀏覽）< `editor`（建立、編輯頁面與上傳圖片）< `admin`（另可刪除、還原頁面與管理帳號）
 - 錯誤一律回 `{ error: string }`；參數格式錯誤回 `400`
-- 帳號用 `npm run user:create -- <帳號> <密碼>` 建立（目前沒有註冊 API）
+- 第一個帳號用 `npm run user:create -- <帳號> <密碼>` 建立（資料庫沒有帳號時自動為 admin），之後由 admin 在 `/admin/users` 建立；沒有開放註冊
 
 ## 資料表
 
 | 資料表 | 用途 | 對應前端 |
 |---|---|---|
-| `users` | 帳號 | `User`、Header 的 `user.name`、修訂的 `author` |
+| `users` | 帳號（角色、停用標記） | `User`、Header 的 `user.name`、修訂的 `author`、`/admin/users` |
 | `sessions` | 登入狀態 | `auth.ts`、`_auth.tsx` 守衛 |
 | `pages` | 頁面（slug、標題、目前版本、軟刪除標記） | `Page.slug`、`Page.title` |
 | `page_revisions` | 每次儲存的內容 | `Revision`（`rev`、`content`、`author`、`createdAt`） |
@@ -26,6 +27,8 @@
 | `/login` | `auth.login` | `POST /api/auth/login` | `users`、`sessions` |
 | Header 登出 | `auth.logout` | `POST /api/auth/logout` | `sessions` |
 | App 啟動 / `_auth` 守衛 | `auth.get` | `GET /api/auth/me` | `sessions`、`users` |
+| `/account` 修改密碼 | `auth.changePassword` | 🔒 `POST /api/auth/password` | `users`、`sessions` |
+| `/admin/users` | `listUsers`、`createUser`、`updateUser` | 🔒 admin `GET`、`POST /api/users`、`PATCH /api/users/:id` | `users`、`sessions` |
 | `/pages` | `listPages` | `GET /api/pages` | `pages` |
 | `/new`（檢查 slug、上層頁面選單） | `listPages` | `GET /api/pages` | `pages` |
 | `/recent` | `listPages` + 前端攤平排序 | `GET /api/recent` | `page_revisions`、`pages`、`users` |
@@ -35,11 +38,11 @@
 | `/history/$?rev=N` | 同上 | `GET /api/pages/:slug?rev=N` | `page_revisions` |
 | `/diff/$?from=A&to=B` | `getPage`、`getBreadcrumbs` | `GET /api/pages/:slug?rev=A`、`?rev=B`、`GET /api/breadcrumbs/:slug` | `page_revisions` |
 | `/edit/$` 載入 | `getPage`、`getBreadcrumbs` | `GET /api/pages/:slug`（404 = 新建）、`GET /api/breadcrumbs/:slug` | 同 `/wiki/$` |
-| `/edit/$` 儲存 | `savePage` | 🔒 `PUT /api/pages/:slug` | `pages`、`page_revisions` |
-| （前端尚無） | — | 🔒 `DELETE /api/pages/:slug` | `pages`（軟刪除，版本保留） |
-| （前端尚無） | — | `GET /api/deleted` | `pages`、`users` |
-| （前端尚無） | — | 🔒 `POST /api/restore/:slug` | `pages` |
-| `/edit/$` 插入圖片（工具列、貼上、拖曳） | `uploadImage` | 🔒 `POST /api/uploads` | `uploads` |
+| `/edit/$` 儲存 | `savePage` | 🔒 editor `PUT /api/pages/:slug` | `pages`、`page_revisions` |
+| `/wiki/$` 刪除按鈕 | `deletePage` | 🔒 admin `DELETE /api/pages/:slug` | `pages`（軟刪除，版本保留） |
+| `/admin/deleted` | `listDeleted` | 🔒 admin `GET /api/deleted` | `pages`、`users` |
+| `/admin/deleted` 還原 | `restorePage` | 🔒 admin `POST /api/restore/:slug` | `pages` |
+| `/edit/$` 插入圖片（工具列、貼上、拖曳） | `uploadImage` | 🔒 editor `POST /api/uploads` | `uploads` |
 | 頁面中的 `<img>` | — | `GET /api/uploads/:name` | `uploads` |
 
 ## API 規格
@@ -54,8 +57,9 @@
 // request
 { username: string; password: string }
 // 200：設定 httpOnly session cookie
-{ user: { name: string } }
+{ user: { name: string; role: 'admin' | 'editor' | 'viewer' } }
 // 401：帳號或密碼錯誤
+// 403：帳號已停用（只在密碼正確時才回，避免洩漏帳號狀態）
 ```
 
 #### `POST /api/auth/logout`
@@ -63,9 +67,46 @@
 
 #### `GET /api/auth/me`
 ```ts
-// 200
-{ user: { name: string } | null }
+// 200；停用帳號的 session 視同未登入
+{ user: { name: string; role: 'admin' | 'editor' | 'viewer' } | null }
 ```
+角色每個請求都從資料庫讀取，admin 改了角色會立即生效，不必重新登入。
+
+#### 🔒 `POST /api/auth/password`
+修改自己的密碼。成功回 `204`，並刪除這個帳號其他的 session（目前這個保留）。
+```ts
+// request
+{ currentPassword: string; newPassword: string }   // newPassword 至少 8 個字
+// 400：目前的密碼不正確、新密碼太短
+```
+
+### 帳號管理（🔒 admin）
+
+帳號不提供刪除：修訂紀錄與上傳都引用作者，不再使用的帳號改為停用。
+```ts
+type ManagedUser = { id: string; username: string; role: 'admin' | 'editor' | 'viewer'; disabled: boolean; createdAt: string }
+```
+
+#### `GET /api/users`
+所有帳號，依建立順序。回 `ManagedUser[]`。
+
+#### `POST /api/users`
+```ts
+// request；role 預設 editor
+{ username: string; password: string; role?: 'admin' | 'editor' | 'viewer' }
+// 201：ManagedUser
+// 400：帳號為空、超過 32 字或含空白；密碼少於 8 個字；role 不正確
+// 409：帳號已存在
+```
+
+#### `PATCH /api/users/:id`
+修改角色、停用／啟用、重設密碼；欄位都是選填，只改有送的。回 `200` 與更新後的 `ManagedUser`，帳號不存在回 `404`。
+```ts
+{ role?: 'admin' | 'editor' | 'viewer'; disabled?: boolean; password?: string }
+```
+- 停用或重設密碼時，刪除該帳號所有的 session
+- 不能變更自己的角色或停用自己（`400`），自己的密碼用 `POST /api/auth/password` 修改
+- 在 transaction 中先 `SELECT ... WHERE role = 'admin' AND disabled_at IS NULL FOR UPDATE` 並確認自己仍是有效的 admin，兩位 admin 同時互相降級時後到的會得到 `403`；因此任何時候都至少保留一位 admin
 
 ### 頁面
 
@@ -96,7 +137,7 @@ JOIN users u ON u.id = r.author_id
 WHERE p.slug = $1 AND p.deleted_at IS NULL
 ```
 
-#### 🔒 `PUT /api/pages/:slug`
+#### 🔒 editor `PUT /api/pages/:slug`
 儲存內容：頁面不存在就建立（第 1 版），存在就新增一個版本。作者為目前登入的使用者。
 ```ts
 // request
@@ -119,20 +160,20 @@ WHERE p.slug = $1 AND p.deleted_at IS NULL
 
 新建時若兩個人同時送出，`pages.slug` 的 UNIQUE 會讓後到的失敗，回 `409`。
 
-#### 🔒 `DELETE /api/pages/:slug`
+#### 🔒 admin `DELETE /api/pages/:slug`
 軟刪除頁面，回 `204`；頁面不存在或已刪除回 `404`。版本紀錄保留，可用 `POST /api/restore/:slug` 還原。
 子頁面（slug 前綴相同的頁面）不受影響，麵包屑會把這一層顯示為「尚未建立」。
 ```sql
 UPDATE pages SET deleted_at = now(), deleted_by = $2 WHERE slug = $1 AND deleted_at IS NULL
 ```
 
-#### `GET /api/deleted`
+#### 🔒 admin `GET /api/deleted`
 已刪除的頁面，依刪除時間由新到舊。
 ```ts
 { slug: string; title: string; deletedAt: string; deletedBy: string }[]
 ```
 
-#### 🔒 `POST /api/restore/:slug`
+#### 🔒 admin `POST /api/restore/:slug`
 還原已刪除的頁面，不新增版本，內容回到刪除前的最新版本。找不到已刪除的頁面回 `404`。
 ```ts
 // 200
@@ -197,7 +238,7 @@ ORDER BY p.updated_at DESC
 檔案存在 `UPLOAD_DIR`（預設 `server/uploads/`），檔名為 `<sha256>.<副檔名>`，由 server 產生。
 同一張圖只存一份；內容不會改變，所以可以長期快取。
 
-#### 🔒 `POST /api/uploads`
+#### 🔒 editor `POST /api/uploads`
 上傳圖片，`multipart/form-data`，欄位名稱 `file`。
 只接受 PNG、JPEG、GIF、WebP（依檔頭判斷，不看副檔名與 `Content-Type`），不接受 SVG。
 ```ts
@@ -229,4 +270,6 @@ ORDER BY p.updated_at DESC
 - `/history/$` 只拿版本列表，有 `rev` 時另外取該版本；`/diff/$` 分別取兩個版本
 - `/edit/$` 啟用 MDXEditor 的 `imagePlugin`，上傳走 `uploadImage`；失敗時在編輯器下方顯示錯誤。關閉圖片縮放，避免存成檢視頁不渲染的 HTML `<img>`
 - `/recent` 改用 `GET /api/recent`；時間用 `lib/format.ts` 轉成在地格式
+- 角色：`auth.ts` 的 `hasRole`、`mayEdit` 只決定按鈕顯示；`_auth/_editor.tsx`、`_auth/_admin.tsx` 兩個無路徑 layout 在 `beforeLoad` 檢查角色，不足時顯示「沒有權限」（`components/Forbidden.tsx`）。實際權限一律以 API 的 `403` 為準
+- `lib/admin-api.ts`：帳號管理與刪除／還原頁面
 - `app/vite.config.ts` 設定 `/api` proxy 到 `http://localhost:3001`；正式環境需由同一個網域提供前端與 `/api`

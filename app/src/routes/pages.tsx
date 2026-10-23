@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
+import { mayEdit, useAuth } from '#/lib/auth'
 import { listPages } from '#/lib/wiki-api'
 import { formatDateTime } from '#/lib/format'
 import { pageHead } from '#/lib/head'
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/pages')({
 
 function PagesIndex() {
   const pages = Route.useLoaderData()
+  const { user } = useAuth()
   const [filter, setFilter] = useState('')
 
   const term = filter.trim().toLowerCase()
@@ -28,15 +30,17 @@ function PagesIndex() {
             {pages.length}
           </span>
         </h1>
-        <Link to="/new" className="btn btn-primary shrink-0 hover:no-underline">
-          ＋ 新增頁面
-        </Link>
+        {mayEdit(user) && (
+          <Link to="/new" className="btn btn-primary shrink-0 hover:no-underline">
+            ＋ 新增頁面
+          </Link>
+        )}
       </div>
 
       {pages.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 px-6 py-12 text-center text-gray-500">
           <p className="mt-0">還沒有任何頁面。</p>
-          <Link to="/new">建立第一個頁面</Link>
+          {mayEdit(user) && <Link to="/new">建立第一個頁面</Link>}
         </div>
       ) : (
         <>

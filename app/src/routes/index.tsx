@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useAuth } from '#/lib/auth'
+import { mayEdit, useAuth } from '#/lib/auth'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -17,10 +17,12 @@ function Home() {
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        {/* /new 需要登入；未登入時 _auth 守衛會先導向登入頁，登入後再回到 /new */}
-        <Link to="/new" className="btn btn-primary px-5 py-2.5 text-base hover:no-underline">
-          ＋ 建立新頁面
-        </Link>
+        {/* /new 需要登入；未登入時 _auth 守衛會先導向登入頁，登入後再回到 /new；檢視者不顯示 */}
+        {mayEdit(user) && (
+          <Link to="/new" className="btn btn-primary px-5 py-2.5 text-base hover:no-underline">
+            ＋ 建立新頁面
+          </Link>
+        )}
         <Link to="/pages" className="btn px-5 py-2.5 text-base hover:no-underline">
           瀏覽所有頁面
         </Link>

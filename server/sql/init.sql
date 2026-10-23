@@ -11,6 +11,19 @@ CREATE TABLE IF NOT EXISTS users (
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 角色：viewer 只能瀏覽；editor 可建立、編輯頁面與上傳圖片；admin 另可刪除、還原頁面與管理帳號
+-- 停用：disabled_at 不為 NULL 時不能登入，既有的 session 也會失效
+-- 用 ADD COLUMN IF NOT EXISTS，已建立的資料庫重新執行 db:init 即可補上；既有帳號預設為 editor
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'editor'
+  CHECK (role IN ('admin', 'editor', 'viewer'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS disabled_at TIMESTAMPTZ;
+
+-- 升級時還沒有任何 admin：把最早建立的帳號設為 admin，避免沒有人能管理帳號
+-- API 不允許移除最後一位 admin，所以之後重新執行不會有影響
+UPDATE users SET role = 'admin'
+WHERE id = (SELECT min(id) FROM users)
+  AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin');
+
 -- 登入 session：cookie 存原始 token，資料庫只存它的雜湊
 -- 對應 _auth.tsx 的登入守衛、登出按鈕
 CREATE TABLE IF NOT EXISTS sessions (

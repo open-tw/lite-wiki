@@ -4,8 +4,8 @@ import { URL_NAME_PATTERN, normalizeSlug, suggestUrlName } from '#/lib/slug'
 import { listPages } from '#/lib/wiki-api'
 import { pageHead } from '#/lib/head'
 
-// 需登入：守衛在 _auth.tsx
-export const Route = createFileRoute('/_auth/new')({
+// 需要 editor 以上：守衛在 _auth.tsx（登入）與 _auth/_editor.tsx（角色）
+export const Route = createFileRoute('/_auth/_editor/new')({
   validateSearch: (search: Record<string, unknown>): { parent?: string } =>
     typeof search.parent === 'string' && normalizeSlug(search.parent)
       ? { parent: normalizeSlug(search.parent) }

@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono'
-import { requireAuth, type Env } from '../auth.js'
+import { requireRole, type Env } from '../auth.js'
 import { pool } from '../db.js'
 import { isUniqueViolation, readBody, toPositiveInt } from '../lib/http.js'
 import { normalizeSlug } from '../lib/slug.js'
@@ -49,7 +49,7 @@ wikiRoutes.get('/pages/:slug{.+}', async (c) => {
 
 // 儲存：頁面不存在就建立（第 1 版，回 201），存在就新增一個版本（回 200）
 // 已刪除的頁面視為不存在：重新建立時沿用同一筆並接續版號（回 201），舊版本一併恢復
-wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
+wikiRoutes.put('/pages/:slug{.+}', requireRole('editor'), async (c) => {
   const slug = slugParam(c)
   if (!slug) return c.json({ error: '無效的 slug' }, 400)
   const body = await readBody(c)
@@ -121,7 +121,7 @@ wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
 })
 
 // 刪除頁面（軟刪除）：只標記，版本都保留，可用 /restore 還原；子頁面（slug 前綴相同的頁面）不受影響
-wikiRoutes.delete('/pages/:slug{.+}', requireAuth, async (c) => {
+wikiRoutes.delete('/pages/:slug{.+}', requireRole('admin'), async (c) => {
   const slug = slugParam(c)
   if (!slug) return c.json({ error: '無效的 slug' }, 400)
   const { rowCount } = await pool.query(
@@ -132,8 +132,8 @@ wikiRoutes.delete('/pages/:slug{.+}', requireAuth, async (c) => {
   return c.body(null, 204)
 })
 
-// 已刪除的頁面，由新到舊
-wikiRoutes.get('/deleted', async (c) => {
+// 已刪除的頁面，由新到舊；只給 admin（還原頁面用）
+wikiRoutes.get('/deleted', requireRole('admin'), async (c) => {
   const { rows } = await pool.query(
     `SELECT p.slug, p.title, p.deleted_at AS "deletedAt", u.username AS "deletedBy"
      FROM pages p
@@ -145,7 +145,7 @@ wikiRoutes.get('/deleted', async (c) => {
 })
 
 // 還原已刪除的頁面；不新增版本，內容回到刪除前的最新版本
-wikiRoutes.post('/restore/:slug{.+}', requireAuth, async (c) => {
+wikiRoutes.post('/restore/:slug{.+}', requireRole('admin'), async (c) => {
   const slug = slugParam(c)
   if (!slug) return c.json({ error: '無效的 slug' }, 400)
   const { rows } = await pool.query<{ current_rev: number }>(

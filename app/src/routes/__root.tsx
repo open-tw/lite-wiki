@@ -9,7 +9,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
-import { auth, useAuth } from "#/lib/auth";
+import { auth, hasRole, mayEdit, useAuth } from "#/lib/auth";
 import { pageHead } from "#/lib/head";
 import "../styles.css";
 
@@ -62,11 +62,19 @@ function Header() {
         <Link to="/pages">所有頁面</Link>
         <Link to="/recent">最近變更</Link>
         <Link to="/search">搜尋</Link>
-        <Link to="/new">＋ 新增頁面</Link>
+        {mayEdit(user) && <Link to="/new">＋ 新增頁面</Link>}
       </nav>
       {user ? (
-        <span className="flex items-center gap-2 text-sm">
-          {user.name}
+        <span className="flex items-center gap-3 text-sm">
+          {hasRole(user, "admin") && (
+            <>
+              <Link to="/admin/users">帳號管理</Link>
+              <Link to="/admin/deleted">已刪除的頁面</Link>
+            </>
+          )}
+          <Link to="/account" title="我的帳號">
+            {user.name}
+          </Link>
           <button
             className="btn"
             onClick={async () => {

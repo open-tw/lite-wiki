@@ -8,8 +8,8 @@ import { ApiError } from '#/lib/api'
 import { normalizeSlug } from '#/lib/slug'
 import { getBreadcrumbs, getPage, savePage, uploadImage } from '#/lib/wiki-api'
 
-// 需登入：守衛在 _auth.tsx
-export const Route = createFileRoute('/_auth/edit/$')({
+// 需要 editor 以上：守衛在 _auth.tsx（登入）與 _auth/_editor.tsx（角色）
+export const Route = createFileRoute('/_auth/_editor/edit/$')({
   // title：從 /new 帶過來的原始標題，只在新建時使用
   validateSearch: (search: Record<string, unknown>): { title?: string } =>
     typeof search.title === 'string' && search.title.trim() ? { title: search.title.trim() } : {},

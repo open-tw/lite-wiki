@@ -15,11 +15,16 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RecentRouteImport } from './routes/recent'
 import { Route as SearchRouteImport } from './routes/search'
-import { Route as AuthNewRouteImport } from './routes/_auth/new'
+import { Route as AuthAdminRouteImport } from './routes/_auth/_admin'
+import { Route as AuthEditorRouteImport } from './routes/_auth/_editor'
+import { Route as AuthAccountRouteImport } from './routes/_auth/account'
 import { Route as DiffSplatRouteImport } from './routes/diff/$'
 import { Route as HistorySplatRouteImport } from './routes/history/$'
 import { Route as WikiSplatRouteImport } from './routes/wiki/$'
-import { Route as AuthEditSplatRouteImport } from './routes/_auth/edit/$'
+import { Route as AuthEditorNewRouteImport } from './routes/_auth/_editor/new'
+import { Route as AuthAdminAdminDeletedRouteImport } from './routes/_auth/_admin/admin/deleted'
+import { Route as AuthAdminAdminUsersRouteImport } from './routes/_auth/_admin/admin/users'
+import { Route as AuthEditorEditSplatRouteImport } from './routes/_auth/_editor/edit/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -50,9 +55,17 @@ const SearchRoute = SearchRouteImport.update({
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthNewRoute = AuthNewRouteImport.update({
-  id: '/new',
-  path: '/new',
+const AuthAdminRoute = AuthAdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthEditorRoute = AuthEditorRouteImport.update({
+  id: '/_editor',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthAccountRoute = AuthAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AuthRoute,
 } as any)
 const DiffSplatRoute = DiffSplatRouteImport.update({
@@ -70,10 +83,25 @@ const WikiSplatRoute = WikiSplatRouteImport.update({
   path: '/wiki/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthEditSplatRoute = AuthEditSplatRouteImport.update({
+const AuthEditorNewRoute = AuthEditorNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthEditorRoute,
+} as any)
+const AuthAdminAdminDeletedRoute = AuthAdminAdminDeletedRouteImport.update({
+  id: '/admin/deleted',
+  path: '/admin/deleted',
+  getParentRoute: () => AuthAdminRoute,
+} as any)
+const AuthAdminAdminUsersRoute = AuthAdminAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthAdminRoute,
+} as any)
+const AuthEditorEditSplatRoute = AuthEditorEditSplatRouteImport.update({
   id: '/edit/$',
   path: '/edit/$',
-  getParentRoute: () => AuthRoute,
+  getParentRoute: () => AuthEditorRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -82,11 +110,14 @@ export interface FileRoutesByFullPath {
   '/pages': typeof PagesRoute
   '/recent': typeof RecentRoute
   '/search': typeof SearchRoute
-  '/new': typeof AuthNewRoute
+  '/account': typeof AuthAccountRoute
   '/diff/$': typeof DiffSplatRoute
   '/history/$': typeof HistorySplatRoute
   '/wiki/$': typeof WikiSplatRoute
-  '/edit/$': typeof AuthEditSplatRoute
+  '/new': typeof AuthEditorNewRoute
+  '/admin/deleted': typeof AuthAdminAdminDeletedRoute
+  '/admin/users': typeof AuthAdminAdminUsersRoute
+  '/edit/$': typeof AuthEditorEditSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,11 +125,14 @@ export interface FileRoutesByTo {
   '/pages': typeof PagesRoute
   '/recent': typeof RecentRoute
   '/search': typeof SearchRoute
-  '/new': typeof AuthNewRoute
+  '/account': typeof AuthAccountRoute
   '/diff/$': typeof DiffSplatRoute
   '/history/$': typeof HistorySplatRoute
   '/wiki/$': typeof WikiSplatRoute
-  '/edit/$': typeof AuthEditSplatRoute
+  '/new': typeof AuthEditorNewRoute
+  '/admin/deleted': typeof AuthAdminAdminDeletedRoute
+  '/admin/users': typeof AuthAdminAdminUsersRoute
+  '/edit/$': typeof AuthEditorEditSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -108,11 +142,16 @@ export interface FileRoutesById {
   '/pages': typeof PagesRoute
   '/recent': typeof RecentRoute
   '/search': typeof SearchRoute
-  '/_auth/new': typeof AuthNewRoute
+  '/_auth/_admin': typeof AuthAdminRouteWithChildren
+  '/_auth/_editor': typeof AuthEditorRouteWithChildren
+  '/_auth/account': typeof AuthAccountRoute
   '/diff/$': typeof DiffSplatRoute
   '/history/$': typeof HistorySplatRoute
   '/wiki/$': typeof WikiSplatRoute
-  '/_auth/edit/$': typeof AuthEditSplatRoute
+  '/_auth/_editor/new': typeof AuthEditorNewRoute
+  '/_auth/_admin/admin/deleted': typeof AuthAdminAdminDeletedRoute
+  '/_auth/_admin/admin/users': typeof AuthAdminAdminUsersRoute
+  '/_auth/_editor/edit/$': typeof AuthEditorEditSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -122,10 +161,13 @@ export interface FileRouteTypes {
     | '/pages'
     | '/recent'
     | '/search'
-    | '/new'
+    | '/account'
     | '/diff/$'
     | '/history/$'
     | '/wiki/$'
+    | '/new'
+    | '/admin/deleted'
+    | '/admin/users'
     | '/edit/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -134,10 +176,13 @@ export interface FileRouteTypes {
     | '/pages'
     | '/recent'
     | '/search'
-    | '/new'
+    | '/account'
     | '/diff/$'
     | '/history/$'
     | '/wiki/$'
+    | '/new'
+    | '/admin/deleted'
+    | '/admin/users'
     | '/edit/$'
   id:
     | '__root__'
@@ -147,11 +192,16 @@ export interface FileRouteTypes {
     | '/pages'
     | '/recent'
     | '/search'
-    | '/_auth/new'
+    | '/_auth/_admin'
+    | '/_auth/_editor'
+    | '/_auth/account'
     | '/diff/$'
     | '/history/$'
     | '/wiki/$'
-    | '/_auth/edit/$'
+    | '/_auth/_editor/new'
+    | '/_auth/_admin/admin/deleted'
+    | '/_auth/_admin/admin/users'
+    | '/_auth/_editor/edit/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,11 +260,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_auth/new': {
-      id: '/_auth/new'
-      path: '/new'
-      fullPath: '/new'
-      preLoaderRoute: typeof AuthNewRouteImport
+    '/_auth/_admin': {
+      id: '/_auth/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthAdminRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/_editor': {
+      id: '/_auth/_editor'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthEditorRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/account': {
+      id: '/_auth/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthAccountRouteImport
       parentRoute: typeof AuthRoute
     }
     '/diff/$': {
@@ -238,24 +302,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WikiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_auth/edit/$': {
-      id: '/_auth/edit/$'
+    '/_auth/_editor/new': {
+      id: '/_auth/_editor/new'
+      path: '/new'
+      fullPath: '/new'
+      preLoaderRoute: typeof AuthEditorNewRouteImport
+      parentRoute: typeof AuthEditorRoute
+    }
+    '/_auth/_admin/admin/deleted': {
+      id: '/_auth/_admin/admin/deleted'
+      path: '/admin/deleted'
+      fullPath: '/admin/deleted'
+      preLoaderRoute: typeof AuthAdminAdminDeletedRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
+    '/_auth/_admin/admin/users': {
+      id: '/_auth/_admin/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthAdminAdminUsersRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
+    '/_auth/_editor/edit/$': {
+      id: '/_auth/_editor/edit/$'
       path: '/edit/$'
       fullPath: '/edit/$'
-      preLoaderRoute: typeof AuthEditSplatRouteImport
-      parentRoute: typeof AuthRoute
+      preLoaderRoute: typeof AuthEditorEditSplatRouteImport
+      parentRoute: typeof AuthEditorRoute
     }
   }
 }
 
+interface AuthAdminRouteChildren {
+  AuthAdminAdminDeletedRoute: typeof AuthAdminAdminDeletedRoute
+  AuthAdminAdminUsersRoute: typeof AuthAdminAdminUsersRoute
+}
+
+const AuthAdminRouteChildren: AuthAdminRouteChildren = {
+  AuthAdminAdminDeletedRoute: AuthAdminAdminDeletedRoute,
+  AuthAdminAdminUsersRoute: AuthAdminAdminUsersRoute,
+}
+
+const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
+  AuthAdminRouteChildren,
+)
+
+interface AuthEditorRouteChildren {
+  AuthEditorNewRoute: typeof AuthEditorNewRoute
+  AuthEditorEditSplatRoute: typeof AuthEditorEditSplatRoute
+}
+
+const AuthEditorRouteChildren: AuthEditorRouteChildren = {
+  AuthEditorNewRoute: AuthEditorNewRoute,
+  AuthEditorEditSplatRoute: AuthEditorEditSplatRoute,
+}
+
+const AuthEditorRouteWithChildren = AuthEditorRoute._addFileChildren(
+  AuthEditorRouteChildren,
+)
+
 interface AuthRouteChildren {
-  AuthNewRoute: typeof AuthNewRoute
-  AuthEditSplatRoute: typeof AuthEditSplatRoute
+  AuthAdminRoute: typeof AuthAdminRouteWithChildren
+  AuthEditorRoute: typeof AuthEditorRouteWithChildren
+  AuthAccountRoute: typeof AuthAccountRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
-  AuthNewRoute: AuthNewRoute,
-  AuthEditSplatRoute: AuthEditSplatRoute,
+  AuthAdminRoute: AuthAdminRouteWithChildren,
+  AuthEditorRoute: AuthEditorRouteWithChildren,
+  AuthAccountRoute: AuthAccountRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
-import { requireAuth, type Env } from '../auth.js'
+import { requireRole, type Env } from '../auth.js'
 import { pool } from '../db.js'
 import { detectImage, extOf } from '../lib/image.js'
 import { getFile, putFile } from '../lib/storage.js'
@@ -15,7 +15,7 @@ const TOO_LARGE = '圖片不可超過 5MB'
 // 同一張圖重複上傳時不另存，直接回傳既有網址
 uploadRoutes.post(
   '/',
-  requireAuth,
+  requireRole('editor'),
   // multipart 的邊界與欄位標頭會多佔一些空間，實際檔案大小下面再檢查一次
   bodyLimit({ maxSize: MAX_BYTES + 64 * 1024, onError: (c) => c.json({ error: TOO_LARGE }, 413) }),
   async (c) => {
