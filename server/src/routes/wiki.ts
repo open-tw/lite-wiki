@@ -11,10 +11,12 @@ function slugParam(c: Context) {
   return normalizeSlug(c.req.param('slug') ?? '') || null
 }
 
+// 已刪除的頁面（deleted_at 不為 NULL）在所有讀取的 API 中都視為不存在，只會出現在 /deleted
+
 // 所有頁面（/pages 列表、/new 檢查 slug）
 wikiRoutes.get('/pages', async (c) => {
   const { rows } = await pool.query(
-    'SELECT slug, title, updated_at AS "updatedAt" FROM pages ORDER BY slug',
+    'SELECT slug, title, updated_at AS "updatedAt" FROM pages WHERE deleted_at IS NULL ORDER BY slug',
   )
   return c.json(rows)
 })
@@ -32,7 +34,7 @@ wikiRoutes.get('/pages/:slug{.+}', async (c) => {
      FROM pages p
      JOIN page_revisions r ON r.page_id = p.id AND r.rev = COALESCE($2::int, p.current_rev)
      JOIN users u ON u.id = r.author_id
-     WHERE p.slug = $1`,
+     WHERE p.slug = $1 AND p.deleted_at IS NULL`,
     [slug, rev],
   )
   const row = rows[0]
@@ -46,6 +48,7 @@ wikiRoutes.get('/pages/:slug{.+}', async (c) => {
 })
 
 // 儲存：頁面不存在就建立（第 1 版，回 201），存在就新增一個版本（回 200）
+// 已刪除的頁面視為不存在：重新建立時沿用同一筆並接續版號（回 201），舊版本一併恢復
 wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
   const slug = slugParam(c)
   if (!slug) return c.json({ error: '無效的 slug' }, 400)
@@ -63,15 +66,16 @@ wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const { rows } = await client.query<{ id: string; current_rev: number }>(
-      'SELECT id, current_rev FROM pages WHERE slug = $1 FOR UPDATE',
+    const { rows } = await client.query<{ id: string; current_rev: number; deleted: boolean }>(
+      'SELECT id, current_rev, deleted_at IS NOT NULL AS deleted FROM pages WHERE slug = $1 FOR UPDATE',
       [slug],
     )
     const page = rows[0]
+    const live = page && !page.deleted ? page : undefined
     // 編輯時載入的版本不是最新版本（或頁面已被刪除），表示有人先改過
-    if (baseRev !== null && page?.current_rev !== baseRev) {
+    if (baseRev !== null && live?.current_rev !== baseRev) {
       await client.query('ROLLBACK')
-      return c.json({ error: '頁面已被其他人更新', currentRev: page?.current_rev ?? null }, 409)
+      return c.json({ error: '頁面已被其他人更新', currentRev: live?.current_rev ?? null }, 409)
     }
 
     let pageId: string
@@ -79,10 +83,19 @@ wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
     if (page) {
       pageId = page.id
       rev = page.current_rev + 1
-      await client.query('UPDATE pages SET current_rev = $2, updated_at = now() WHERE id = $1', [
-        pageId,
-        rev,
-      ])
+      if (live) {
+        await client.query('UPDATE pages SET current_rev = $2, updated_at = now() WHERE id = $1', [
+          pageId,
+          rev,
+        ])
+      } else {
+        // 在已刪除的 slug 重新建立：清除刪除標記，標題用這次新建時給的
+        await client.query(
+          `UPDATE pages SET current_rev = $2, title = $3, deleted_at = NULL, deleted_by = NULL, updated_at = now()
+           WHERE id = $1`,
+          [pageId, rev, title],
+        )
+      }
     } else {
       rev = 1
       const inserted = await client.query<{ id: string }>(
@@ -96,7 +109,7 @@ wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
       [pageId, rev, content, c.var.user!.id],
     )
     await client.query('COMMIT')
-    return c.json({ slug, rev }, page ? 200 : 201)
+    return c.json({ slug, rev }, live ? 200 : 201)
   } catch (err) {
     await client.query('ROLLBACK')
     // 兩個人同時建立同一個 slug，後到的會撞到 pages.slug 的 UNIQUE
@@ -107,13 +120,42 @@ wikiRoutes.put('/pages/:slug{.+}', requireAuth, async (c) => {
   }
 })
 
-// 刪除頁面與所有版本；子頁面（slug 前綴相同的頁面）不受影響
+// 刪除頁面（軟刪除）：只標記，版本都保留，可用 /restore 還原；子頁面（slug 前綴相同的頁面）不受影響
 wikiRoutes.delete('/pages/:slug{.+}', requireAuth, async (c) => {
   const slug = slugParam(c)
   if (!slug) return c.json({ error: '無效的 slug' }, 400)
-  const { rowCount } = await pool.query('DELETE FROM pages WHERE slug = $1', [slug])
+  const { rowCount } = await pool.query(
+    'UPDATE pages SET deleted_at = now(), deleted_by = $2 WHERE slug = $1 AND deleted_at IS NULL',
+    [slug, c.var.user!.id],
+  )
   if (!rowCount) return c.json({ error: '找不到頁面' }, 404)
   return c.body(null, 204)
+})
+
+// 已刪除的頁面，由新到舊
+wikiRoutes.get('/deleted', async (c) => {
+  const { rows } = await pool.query(
+    `SELECT p.slug, p.title, p.deleted_at AS "deletedAt", u.username AS "deletedBy"
+     FROM pages p
+     JOIN users u ON u.id = p.deleted_by
+     WHERE p.deleted_at IS NOT NULL
+     ORDER BY p.deleted_at DESC`,
+  )
+  return c.json(rows)
+})
+
+// 還原已刪除的頁面；不新增版本，內容回到刪除前的最新版本
+wikiRoutes.post('/restore/:slug{.+}', requireAuth, async (c) => {
+  const slug = slugParam(c)
+  if (!slug) return c.json({ error: '無效的 slug' }, 400)
+  const { rows } = await pool.query<{ current_rev: number }>(
+    `UPDATE pages SET deleted_at = NULL, deleted_by = NULL
+     WHERE slug = $1 AND deleted_at IS NOT NULL
+     RETURNING current_rev`,
+    [slug],
+  )
+  if (!rows[0]) return c.json({ error: '找不到已刪除的頁面' }, 404)
+  return c.json({ slug, rev: rows[0].current_rev })
 })
 
 // 修訂歷史列表（不含內容），由新到舊
@@ -125,7 +167,7 @@ wikiRoutes.get('/revisions/:slug{.+}', async (c) => {
      FROM pages p
      JOIN page_revisions r ON r.page_id = p.id
      JOIN users u ON u.id = r.author_id
-     WHERE p.slug = $1
+     WHERE p.slug = $1 AND p.deleted_at IS NULL
      ORDER BY r.rev DESC`,
     [slug],
   )
@@ -146,7 +188,7 @@ wikiRoutes.get('/breadcrumbs/:slug{.+}', async (c) => {
   const segments = slug.split('/')
   const prefixes = segments.map((_, i) => segments.slice(0, i + 1).join('/'))
   const { rows } = await pool.query<{ slug: string; title: string }>(
-    'SELECT slug, title FROM pages WHERE slug = ANY($1)',
+    'SELECT slug, title FROM pages WHERE slug = ANY($1) AND deleted_at IS NULL',
     [prefixes],
   )
   const titles = new Map(rows.map((r) => [r.slug, r.title]))
@@ -163,6 +205,7 @@ wikiRoutes.get('/recent', async (c) => {
      FROM page_revisions r
      JOIN pages p ON p.id = r.page_id
      JOIN users u ON u.id = r.author_id
+     WHERE p.deleted_at IS NULL
      ORDER BY r.created_at DESC, r.id DESC
      LIMIT $1`,
     [limit],
@@ -180,7 +223,7 @@ wikiRoutes.get('/search', async (c) => {
     `SELECT p.slug, p.title
      FROM pages p
      JOIN page_revisions r ON r.page_id = p.id AND r.rev = p.current_rev
-     WHERE p.title ILIKE $1 OR r.content ILIKE $1
+     WHERE p.deleted_at IS NULL AND (p.title ILIKE $1 OR r.content ILIKE $1)
      ORDER BY p.updated_at DESC`,
     [pattern],
   )

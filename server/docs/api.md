@@ -15,7 +15,7 @@
 |---|---|---|
 | `users` | 帳號 | `User`、Header 的 `user.name`、修訂的 `author` |
 | `sessions` | 登入狀態 | `auth.ts`、`_auth.tsx` 守衛 |
-| `pages` | 頁面（slug、標題、目前版本） | `Page.slug`、`Page.title` |
+| `pages` | 頁面（slug、標題、目前版本、軟刪除標記） | `Page.slug`、`Page.title` |
 | `page_revisions` | 每次儲存的內容 | `Revision`（`rev`、`content`、`author`、`createdAt`） |
 | `uploads` | 上傳圖片的 metadata（檔案本體在 `UPLOAD_DIR`） | 編輯器插入的圖片 |
 
@@ -36,11 +36,16 @@
 | `/diff/$?from=A&to=B` | `getPage`、`getBreadcrumbs` | `GET /api/pages/:slug?rev=A`、`?rev=B`、`GET /api/breadcrumbs/:slug` | `page_revisions` |
 | `/edit/$` 載入 | `getPage`、`getBreadcrumbs` | `GET /api/pages/:slug`（404 = 新建）、`GET /api/breadcrumbs/:slug` | 同 `/wiki/$` |
 | `/edit/$` 儲存 | `savePage` | 🔒 `PUT /api/pages/:slug` | `pages`、`page_revisions` |
-| （前端尚無） | — | 🔒 `DELETE /api/pages/:slug` | `pages`（版本一併刪除） |
+| （前端尚無） | — | 🔒 `DELETE /api/pages/:slug` | `pages`（軟刪除，版本保留） |
+| （前端尚無） | — | `GET /api/deleted` | `pages`、`users` |
+| （前端尚無） | — | 🔒 `POST /api/restore/:slug` | `pages` |
 | `/edit/$` 插入圖片（工具列、貼上、拖曳） | `uploadImage` | 🔒 `POST /api/uploads` | `uploads` |
 | 頁面中的 `<img>` | — | `GET /api/uploads/:name` | `uploads` |
 
 ## API 規格
+
+頁面採軟刪除：刪除只設定 `pages.deleted_at`、`deleted_by`，版本紀錄都保留。
+除了 `GET /api/deleted`，所有讀取頁面的 API 都加上 `deleted_at IS NULL`，已刪除的頁面一律視為不存在（`404`、不出現在列表、最近變更與搜尋）。
 
 ### 驗證
 
@@ -70,7 +75,7 @@
 { slug: string; title: string; updatedAt: string }[]
 ```
 ```sql
-SELECT slug, title, updated_at FROM pages ORDER BY slug
+SELECT slug, title, updated_at FROM pages WHERE deleted_at IS NULL ORDER BY slug
 ```
 
 #### `GET /api/pages/:slug` 、`GET /api/pages/:slug?rev=N`
@@ -88,7 +93,7 @@ SELECT p.slug, p.title, p.current_rev, r.rev, r.content, u.username AS author, r
 FROM pages p
 JOIN page_revisions r ON r.page_id = p.id AND r.rev = COALESCE($2, p.current_rev)
 JOIN users u ON u.id = r.author_id
-WHERE p.slug = $1
+WHERE p.slug = $1 AND p.deleted_at IS NULL
 ```
 
 #### 🔒 `PUT /api/pages/:slug`
@@ -109,13 +114,30 @@ WHERE p.slug = $1
 1. `SELECT ... FROM pages WHERE slug = $1 FOR UPDATE`
 2. 不存在 → `INSERT INTO pages (slug, title, current_rev) VALUES ($1, $2, 1)`
    存在 → 檢查 `baseRev`，再 `UPDATE pages SET current_rev = current_rev + 1, updated_at = now()`
+   已刪除 → 視為新建（回 `201`）：沿用同一筆，清除刪除標記、更新標題，版號接續，舊版本一併恢復；有送 `baseRev` 則回 `409`
 3. `INSERT INTO page_revisions (page_id, rev, content, author_id)`
 
 新建時若兩個人同時送出，`pages.slug` 的 UNIQUE 會讓後到的失敗，回 `409`。
 
 #### 🔒 `DELETE /api/pages/:slug`
-刪除頁面與它的所有版本，回 `204`；頁面不存在回 `404`。
+軟刪除頁面，回 `204`；頁面不存在或已刪除回 `404`。版本紀錄保留，可用 `POST /api/restore/:slug` 還原。
 子頁面（slug 前綴相同的頁面）不受影響，麵包屑會把這一層顯示為「尚未建立」。
+```sql
+UPDATE pages SET deleted_at = now(), deleted_by = $2 WHERE slug = $1 AND deleted_at IS NULL
+```
+
+#### `GET /api/deleted`
+已刪除的頁面，依刪除時間由新到舊。
+```ts
+{ slug: string; title: string; deletedAt: string; deletedBy: string }[]
+```
+
+#### 🔒 `POST /api/restore/:slug`
+還原已刪除的頁面，不新增版本，內容回到刪除前的最新版本。找不到已刪除的頁面回 `404`。
+```ts
+// 200
+{ slug: string; rev: number }
+```
 
 #### `GET /api/revisions/:slug`
 修訂歷史列表，不含內容，依 `rev` 由新到舊。頁面不存在回 `404`。
@@ -134,7 +156,7 @@ slug 每一層前綴的標題；頁面不存在也要回傳（`/wiki/$` 的「�
 ```
 ```sql
 -- $1 為所有前綴，例如 ['docs', 'docs/react', 'docs/react/hooks']
-SELECT slug, title FROM pages WHERE slug = ANY($1)
+SELECT slug, title FROM pages WHERE slug = ANY($1) AND deleted_at IS NULL
 ```
 查不到的前綴用該段文字當 title、`exists: false`。
 
@@ -150,6 +172,7 @@ SELECT p.slug, p.title, r.rev, u.username AS author, r.created_at
 FROM page_revisions r
 JOIN pages p ON p.id = r.page_id
 JOIN users u ON u.id = r.author_id
+WHERE p.deleted_at IS NULL
 ORDER BY r.created_at DESC
 LIMIT $1
 ```
@@ -163,7 +186,8 @@ LIMIT $1
 SELECT p.slug, p.title
 FROM pages p
 JOIN page_revisions r ON r.page_id = p.id AND r.rev = p.current_rev
-WHERE p.title ILIKE $1 OR r.content ILIKE $1   -- $1 = '%' || 跳脫後的 q || '%'
+WHERE p.deleted_at IS NULL
+  AND (p.title ILIKE $1 OR r.content ILIKE $1)   -- $1 = '%' || 跳脫後的 q || '%'
 ORDER BY p.updated_at DESC
 ```
 頁面變多後可加 `pg_trgm` 索引或改用全文搜尋。

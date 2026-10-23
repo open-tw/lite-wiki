@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS pages (
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 軟刪除：刪除只標記時間與刪除者，版本紀錄都保留，可以還原
+-- 讀取的 API 一律加上 deleted_at IS NULL；在已刪除的 slug 重新建立時沿用同一筆，舊版本一併恢復
+-- 用 ADD COLUMN IF NOT EXISTS，已建立的資料庫重新執行 db:init 即可補上
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS deleted_by BIGINT REFERENCES users(id);
+
 -- 修訂版本：對應前端的 Revision（rev、content、author、createdAt）
 -- 每次儲存新增一筆，rev 在同一頁面內從 1 遞增
 CREATE TABLE IF NOT EXISTS page_revisions (
