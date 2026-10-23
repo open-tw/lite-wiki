@@ -29,3 +29,6 @@ lerna-debug.log*
 
 # build
 dist/
+
+# 上傳的圖片
+uploads/

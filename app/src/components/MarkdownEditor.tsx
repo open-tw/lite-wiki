@@ -5,6 +5,7 @@ import {
   CreateLink,
   DiffSourceToggleWrapper,
   InsertCodeBlock,
+  InsertImage,
   InsertTable,
   InsertThematicBreak,
   ListsToggle,
@@ -15,6 +16,7 @@ import {
   codeMirrorPlugin,
   diffSourcePlugin,
   headingsPlugin,
+  imagePlugin,
   linkDialogPlugin,
   linkPlugin,
   listsPlugin,
@@ -34,9 +36,11 @@ type Props = {
   // initialNormalize 為 true：MDXEditor 載入時整理原始內容所觸發，不是使用者的修改
   onChange: (markdown: string, initialNormalize: boolean) => void
   onError?: (message: string) => void
+  // 上傳圖片（工具列、貼上、拖曳），回傳圖片網址
+  onUploadImage: (file: File) => Promise<string>
 }
 
-export function MarkdownEditor({ markdown, original, onChange, onError }: Props) {
+export function MarkdownEditor({ markdown, original, onChange, onError, onUploadImage }: Props) {
   return (
     <MDXEditor
       className="mb-3 rounded-md border border-gray-300"
@@ -53,6 +57,11 @@ export function MarkdownEditor({ markdown, original, onChange, onError }: Props)
         linkPlugin(),
         linkDialogPlugin(),
         tablePlugin(),
+        imagePlugin({
+          imageUploadHandler: onUploadImage,
+          // 調整大小會把圖片存成 HTML 的 <img width>，檢視頁不渲染 HTML，因此只保留 ![]() 語法
+          disableImageResize: true,
+        }),
         codeBlockPlugin({ defaultCodeBlockLanguage: '' }),
         codeMirrorPlugin({
           codeBlockLanguages: {
@@ -79,6 +88,7 @@ export function MarkdownEditor({ markdown, original, onChange, onError }: Props)
               <Separator />
               <ListsToggle />
               <CreateLink />
+              <InsertImage />
               <InsertTable />
               <InsertCodeBlock />
               <InsertThematicBreak />

@@ -48,3 +48,15 @@ CREATE TABLE IF NOT EXISTS page_revisions (
 
 -- /recent：所有頁面的修訂依時間排序
 CREATE INDEX IF NOT EXISTS page_revisions_created_at_idx ON page_revisions (created_at DESC);
+
+-- 上傳的圖片：檔案本體存在 UPLOAD_DIR，這裡只存 metadata
+-- 檔名為 <sha256>.<副檔名>，同一張圖只存一份；內容不會變，可長期快取
+CREATE TABLE IF NOT EXISTS uploads (
+  id           BIGSERIAL PRIMARY KEY,
+  sha256       TEXT        NOT NULL UNIQUE,
+  mime         TEXT        NOT NULL,  -- 由檔頭判斷，不採用使用者送來的值
+  size         INTEGER     NOT NULL,
+  orig_name    TEXT        NOT NULL,  -- 只供顯示，不用於檔案路徑
+  uploader_id  BIGINT      NOT NULL REFERENCES users(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);

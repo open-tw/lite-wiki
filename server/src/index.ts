@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { session, type Env } from './auth.js'
 import { pool } from './db.js'
 import { authRoutes } from './routes/auth.js'
+import { uploadRoutes } from './routes/uploads.js'
 import { wikiRoutes } from './routes/wiki.js'
 
 // 所有路由都在 /api 底下
@@ -16,6 +17,7 @@ app.get('/health', async (c) => {
 })
 
 app.route('/auth', authRoutes)
+app.route('/uploads', uploadRoutes)
 app.route('/', wikiRoutes)
 
 app.notFound((c) => c.json({ error: 'Not Found' }, 404))

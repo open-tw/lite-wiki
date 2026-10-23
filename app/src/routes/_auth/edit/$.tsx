@@ -6,7 +6,7 @@ import { pageHead } from '#/lib/head'
 import { ConfirmDialog } from '#/components/ConfirmDialog'
 import { ApiError } from '#/lib/api'
 import { normalizeSlug } from '#/lib/slug'
-import { getBreadcrumbs, getPage, savePage } from '#/lib/wiki-api'
+import { getBreadcrumbs, getPage, savePage, uploadImage } from '#/lib/wiki-api'
 
 // 需登入：守衛在 _auth.tsx
 export const Route = createFileRoute('/_auth/edit/$')({
@@ -39,6 +39,7 @@ function EditPage() {
   const [content, setContent] = useState(original.trim())
   const [error, setError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const dirty = content !== baseline
   // 存檔後的跳轉不需要提醒；用 ref 才能在同一個事件中立即生效
@@ -93,8 +94,24 @@ function EditPage() {
             setContent(markdown)
           }}
           onError={setError}
+          onUploadImage={async (file) => {
+            setUploadError(null)
+            try {
+              return await uploadImage(file)
+            } catch (err) {
+              // MDXEditor 只會把錯誤印在 console，這裡自己顯示；仍要拋出，編輯器才不會插入圖片
+              if (err instanceof ApiError && err.status === 401) {
+                auth.clear()
+                setUploadError('登入已過期，請在新分頁重新登入後再上傳。')
+              } else {
+                setUploadError(err instanceof ApiError ? err.message : '無法連線到伺服器，請稍後再試。')
+              }
+              throw err
+            }
+          }}
         />
         {error && <p role="alert">Markdown 解析失敗：{error}</p>}
+        {uploadError && <p role="alert">圖片上傳失敗：{uploadError}</p>}
         {saveError && <p role="alert">儲存失敗：{saveError}</p>}
         <div className="flex items-center justify-end gap-4">
           <button type="submit" className="btn btn-primary" disabled={!dirty || saving}>

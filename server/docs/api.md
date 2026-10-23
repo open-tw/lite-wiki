@@ -17,6 +17,7 @@
 | `sessions` | 登入狀態 | `auth.ts`、`_auth.tsx` 守衛 |
 | `pages` | 頁面（slug、標題、目前版本） | `Page.slug`、`Page.title` |
 | `page_revisions` | 每次儲存的內容 | `Revision`（`rev`、`content`、`author`、`createdAt`） |
+| `uploads` | 上傳圖片的 metadata（檔案本體在 `UPLOAD_DIR`） | 編輯器插入的圖片 |
 
 ## 路由對應
 
@@ -36,6 +37,8 @@
 | `/edit/$` 載入 | `getPage`、`getBreadcrumbs` | `GET /api/pages/:slug`（404 = 新建）、`GET /api/breadcrumbs/:slug` | 同 `/wiki/$` |
 | `/edit/$` 儲存 | `savePage` | 🔒 `PUT /api/pages/:slug` | `pages`、`page_revisions` |
 | （前端尚無） | — | 🔒 `DELETE /api/pages/:slug` | `pages`（版本一併刪除） |
+| `/edit/$` 插入圖片（工具列、貼上、拖曳） | `uploadImage` | 🔒 `POST /api/uploads` | `uploads` |
+| 頁面中的 `<img>` | — | `GET /api/uploads/:name` | `uploads` |
 
 ## API 規格
 
@@ -165,6 +168,33 @@ ORDER BY p.updated_at DESC
 ```
 頁面變多後可加 `pg_trgm` 索引或改用全文搜尋。
 
+### 圖片
+
+檔案存在 `UPLOAD_DIR`（預設 `server/uploads/`），檔名為 `<sha256>.<副檔名>`，由 server 產生。
+同一張圖只存一份；內容不會改變，所以可以長期快取。
+
+#### 🔒 `POST /api/uploads`
+上傳圖片，`multipart/form-data`，欄位名稱 `file`。
+只接受 PNG、JPEG、GIF、WebP（依檔頭判斷，不看副檔名與 `Content-Type`），不接受 SVG。
+```ts
+// 201：新上傳；200：同一張圖已存在，回傳既有網址
+{ url: string; mime: string; size: number }   // url 例如 /api/uploads/<sha256>.png
+// 400：沒有 file 欄位
+// 413：超過 5MB
+// 415：不支援的格式
+```
+先寫入檔案，再 `INSERT ... ON CONFLICT (sha256) DO NOTHING`，資料庫的紀錄一定有對應的檔案。
+
+#### `GET /api/uploads/:name`
+回傳圖片本體，找不到回 `404`。目前不需登入。
+- `Content-Type` 取自 `uploads.mime`；副檔名與 mime 不符也回 `404`
+- `Cache-Control: public, max-age=31536000, immutable`
+- `X-Content-Type-Options: nosniff`、`Content-Security-Policy: default-src 'none'; sandbox`
+
+之後有私人頁面時：依「引用這張圖的頁面」檢查權限（新增 `page_uploads` 關聯表，儲存頁面時解析內容更新），並把 `Cache-Control` 改為 `private`。
+
+目前沒有刪除 API：舊版本可能仍引用圖片，刪除會讓歷史頁面破圖。未被任何版本引用的檔案之後可用清理腳本處理。
+
 ## 前端串接（已完成）
 
 - `app/src/lib/api.ts`：共用 `api()` fetch 與 `ApiError`（含 `status` 與錯誤 body）；slug 每段分別編碼
@@ -173,5 +203,6 @@ ORDER BY p.updated_at DESC
 - `/login` 加上密碼欄位與錯誤訊息
 - `/edit/$` 儲存時送 `baseRev`；`409` 提示有人先更新、`401` 提示登入過期，內容都保留在編輯器
 - `/history/$` 只拿版本列表，有 `rev` 時另外取該版本；`/diff/$` 分別取兩個版本
+- `/edit/$` 啟用 MDXEditor 的 `imagePlugin`，上傳走 `uploadImage`；失敗時在編輯器下方顯示錯誤。關閉圖片縮放，避免存成檢視頁不渲染的 HTML `<img>`
 - `/recent` 改用 `GET /api/recent`；時間用 `lib/format.ts` 轉成在地格式
 - `app/vite.config.ts` 設定 `/api` proxy 到 `http://localhost:3001`；正式環境需由同一個網域提供前端與 `/api`

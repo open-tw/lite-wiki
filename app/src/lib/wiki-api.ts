@@ -49,6 +49,15 @@ export function savePage(slug: string, content: string, opts: { title?: string; 
   })
 }
 
+// 上傳圖片，回傳可放進 Markdown 的網址；超過 5MB（413）或格式不支援（415）會拋出 ApiError
+export async function uploadImage(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  // 不手動設定 Content-Type，讓瀏覽器帶上 multipart 的 boundary
+  const { url } = await api<{ url: string }>('/uploads', { method: 'POST', body })
+  return url
+}
+
 // 麵包屑：從最上層到 slug 本身的每一層；不存在的頁面用網址那一段當標題
 export function getBreadcrumbs(slug: string) {
   return api<Crumb[]>(`/breadcrumbs/${slugPath(slug)}`)

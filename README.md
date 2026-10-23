@@ -11,6 +11,7 @@
 ## 功能
 
 - **Markdown 編輯**：所見即所得編輯器（MDXEditor），也可切換原始碼模式，或與上一版比較
+- **圖片上傳**：從工具列、貼上或拖曳插入圖片（PNG、JPEG、GIF、WebP，單張 5MB 以內），同一張圖只存一份
 - **版本紀錄**：每次儲存都是新版本，可瀏覽任一歷史版本、比較兩個版本
 - **階層頁面**：用網址表示上下層（例如 `/wiki/docs/intro`），自動產生麵包屑
 - **搜尋**：依關鍵字搜尋標題與內容
@@ -68,6 +69,7 @@ cp .env.example .env
 | `PG_PASSWORD` | 資料庫密碼（本機 trust 驗證可留空） | `postgres` |
 | `PG_DATABASE` | 資料庫名稱 | `lite_wiki` |
 | `PORT` | 後端 API 的連接埠 | `3001` |
+| `UPLOAD_DIR` | 上傳圖片的存放目錄（相對路徑以 `server/` 為準） | `uploads` |
 
 ### 4. 建立資料表與帳號
 
@@ -116,6 +118,8 @@ lite-wiki/
 - 前端：`cd app && npm run build`，將 `app/dist/` 作為靜態檔案提供
 - **前端與 `/api` 必須在同一個網域**（登入使用 cookie）。例如用 Nginx 或 Caddy 提供 `app/dist/`，並把 `/api` 轉給後端；未符合的路徑要回傳 `index.html`
 - 正式環境請設定 `NODE_ENV=production`，session cookie 才會加上 `Secure`（需要 HTTPS）
+- 上傳的圖片存在 `UPLOAD_DIR`，不在資料庫裡。用容器部署時請把這個目錄掛載成 volume，備份時也要和資料庫一起備份，否則重新部署後圖片會遺失
+- 反向代理若有限制請求大小（例如 Nginx 預設 `client_max_body_size 1m`），請調到 6MB 以上，否則較大的圖片會在到達後端前被擋下
 
 ## 已知限制
 
