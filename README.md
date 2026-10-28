@@ -2,7 +2,7 @@
 
 輕量、可自架的團隊知識庫。用 Markdown 撰寫，每次修改都保留版本紀錄。
 
-> **狀態：Alpha（v0.2.0）**。核心功能已可使用，適合小團隊自架試用；尚未建議用於正式環境，請參考[已知限制](#已知限制)。各版本的變更與升級方式見 [CHANGELOG](CHANGELOG.md)。
+> **狀態：Alpha（v0.2.1）**。核心功能已可使用，適合小團隊自架試用；尚未建議用於正式環境，請參考[已知限制](#已知限制)。各版本的變更與升級方式見 [CHANGELOG](CHANGELOG.md)。
 
 ![首頁](docs/images/home.png)
 
@@ -123,7 +123,7 @@ cd server
 npm test
 ```
 
-需要 PostgreSQL（同上方的 Docker Compose 即可），測試會使用另一個資料庫 `lite_wiki_test`，不影響開發資料。詳見 [`server/README.md`](server/README.md#測試)。每次 push 與 PR 都會在 GitHub Actions 執行後端測試、型別檢查與前後端建置。
+需要 PostgreSQL（同上方的 Docker Compose 即可），測試會使用另一個資料庫 `lite_wiki_test`，不影響開發資料。詳見 [`server/README.md`](server/README.md#測試)。push 到 main 與每個 PR 都會在 GitHub Actions 執行後端測試、型別檢查與前後端建置。
 
 ## 部署
 
