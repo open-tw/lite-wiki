@@ -111,9 +111,19 @@ lite-wiki/
     ├── src/
     │   ├── routes/      API 路由
     │   └── scripts/     db:init、user:create
+    ├── test/            自動化測試（npm test）
     ├── sql/init.sql     資料表定義
     └── docs/api.md      API 規格與前端對應
 ```
+
+## 測試
+
+```bash
+cd server
+npm test
+```
+
+需要 PostgreSQL（同上方的 Docker Compose 即可），測試會使用另一個資料庫 `lite_wiki_test`，不影響開發資料。詳見 [`server/README.md`](server/README.md#測試)。每次 push 與 PR 都會在 GitHub Actions 執行後端測試、型別檢查與前後端建置。
 
 ## 部署
 
@@ -128,7 +138,7 @@ lite-wiki/
 
 - 登入沒有限制嘗試次數；過期的 session 不會自動清除
 - 權限只分全站角色，還不能針對個別頁面設定；也還不能關閉匿名瀏覽
-- 尚未有自動化測試與 CI
+- 自動化測試目前只涵蓋後端的登入、帳號管理與頁面權限
 - 尚未支援暗色模式
 
 歡迎開 issue 或 PR。

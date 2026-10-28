@@ -1,0 +1,9 @@
+// 型別檢查用（npm run typecheck），包含測試；建置仍用 tsconfig.json，只編譯 src/
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src", "test"]
+}

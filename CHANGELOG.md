@@ -3,6 +3,17 @@
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本號遵循 [語意化版本](https://semver.org/lang/zh-TW/)。
 1.0 之前，有不相容的變更時會提升次版號（例如 0.1 → 0.2）。
 
+## [未發布]
+
+### 新增
+
+- 後端自動化測試（`cd server && npm test`），涵蓋登入、session、修改密碼、帳號管理與頁面的角色權限。測試使用另一個資料庫（預設 `lite_wiki_test`），不影響開發資料。
+- GitHub Actions：每次 push 與 PR 執行後端測試、型別檢查，以及前後端建置。
+
+### 變更
+
+- 後端的 Hono app 移到 `server/src/app.ts`，`src/index.ts` 只負責啟動 server。
+
 ## [0.2.0] - 2026-10-23
 
 ### 升級前請先看
@@ -56,5 +67,6 @@
 - 同時編輯時的衝突提示
 - 帳號登入（帳號以 `npm run user:create` 建立）
 
+[未發布]: https://github.com/open-tw/lite-wiki/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/open-tw/lite-wiki/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/open-tw/lite-wiki/releases/tag/v0.1.0

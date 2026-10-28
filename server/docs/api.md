@@ -3,7 +3,7 @@
 前端目前的資料來源是 `app/src/lib/wiki-api.ts`（記憶體）與 `app/src/lib/auth.ts`（只存名字）。
 本文件整理每個前端路由需要的資料、對應的 API 與資料表，作為接上真正後端的依據。
 
-- 所有 API 以 `/api` 開頭（`src/index.ts` 用 `basePath('/api')` 統一加上，定義路由時不用寫），回傳 JSON；時間一律為 ISO 8601 字串
+- 所有 API 以 `/api` 開頭（`src/app.ts` 用 `basePath('/api')` 統一加上，定義路由時不用寫），回傳 JSON；時間一律為 ISO 8601 字串
 - slug 可包含 `/`（例如 `docs/intro`），在 Hono 用 `:slug{.+}` 取得
 - 標示 🔒 的 API 需要登入（session cookie），未登入回 `401`；後面標註角色的（例如 🔒 editor）另外需要該角色以上，不足回 `403`
 - 角色由低到高：`viewer`（只能瀏覽）< `editor`（建立、編輯頁面與上傳圖片）< `admin`（另可刪除、還原頁面與管理帳號）
